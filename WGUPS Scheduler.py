@@ -193,6 +193,7 @@ for i in range(package_import_rows.__len__() - 2):
         if v.destination.address == package_address:
             package_destination = v.destination
             v.destination.city = package_city   # Assign correct city data to vertex destination.
+            v.destination.state = package_state   # Assign correct state data to vertex destination.
             break
 
     if package_deadline_time[0] is 'E':  # Convert deadline time to four-digit 24-hour time. (e.g. 4:00 PM to 1600)
