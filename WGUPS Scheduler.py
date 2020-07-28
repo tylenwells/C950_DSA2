@@ -1,6 +1,9 @@
 # Tylen Wells twell56
 
 import csv
+from os import system, name
+import time
+import sys
 
 
 class Package:
@@ -13,6 +16,7 @@ class Package:
         self.status = status
         self.truck = 0  # If value of truck is 0, package has not yet been assigned to a truck.
         self.note = note
+        self.assigned = False
 
 
 class Destination:
@@ -62,6 +66,26 @@ class PackageHashTable:  # This hash table is meant to store the Package items, 
         package = package
         key = self._generate_key(package.id)
         self._add_to_list(key, package)
+
+    def __count__(self, reference_string="") -> int:
+        count = 0
+        if reference_string is "":
+            for value in range(self.table.__len__()):
+                count = count + self.table[value].__len__()
+        if reference_string is "note":
+            for value in range(self.table.__len__()):
+                if self.table[value].__len__() != 0 and len(self.table[value][0][1].note) != 0:
+                    count = count + 1
+        if reference_string is "unresolved":
+            for value in range(self.table.__len__()):
+                if self.table[value].__len__() != 0 and len(self.table[value][0][1].note) != 0 and \
+                        self.table[value][0][1].assigned is False:
+                    count = count + 1
+        if reference_string is "unassigned":
+            for value in range(self.table.__len__()):
+                if self.table[value].__len__() != 0 and self.table[value][0][1].assigned is False:
+                    count = count + 1
+        return count
 
     def _add_to_list(self, key, package: Package):
 
@@ -192,8 +216,8 @@ for i in range(package_import_rows.__len__() - 2):
     for v in vertex_list:  # Find package destination in vertex list, use for creation of Package object.
         if v.destination.address == package_address:
             package_destination = v.destination
-            v.destination.city = package_city   # Assign correct city data to vertex destination.
-            v.destination.state = package_state   # Assign correct state data to vertex destination.
+            v.destination.city = package_city  # Assign correct city data to vertex destination.
+            v.destination.state = package_state  # Assign correct state data to vertex destination.
             break
 
     if package_deadline_time[0] is 'E':  # Convert deadline time to four-digit 24-hour time. (e.g. 4:00 PM to 1600)
@@ -212,3 +236,102 @@ for i in range(package_import_rows.__len__() - 2):
 
     package_hash_table.insert(p1)
 
+
+##
+# GUI implementation starts here.
+##
+
+class GUI:
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def clear():
+        if name == 'nt':
+            _ = system('cls')
+        if name == 'posix':
+            _ = system('clear')
+
+    def draw_main(self):
+
+        self.clear()
+        time.sleep(0.1)
+        print("########################################################################\n")
+        print("Welcome to the WGUPS Scheduling Application!\n\n\nCurrent configuration is as follows:")
+        print("Number of Trucks: 2")
+        print("Number of Packages: " + str(package_hash_table.__count__()))
+        print("Number of Packages with notes: " + str(package_hash_table.__count__("note")))
+        print("Number of Packages with notes awaiting resolution: " + str(package_hash_table.__count__("unresolved")))
+        print("Number of packages that are unassigned: " + str(package_hash_table.__count__("unassigned")))
+
+        print("\nPlease choose an option:")
+        print("1. Review packages with notes. (Required before auto-assignment of packages can occur.)")
+        print("2. Review all packages.")
+        print("3. View status of specific package.")
+        print("4. View estimated status of all packages at a specified time.")
+        print("5. Manual Package Assignment")
+        print("6. Automatically assign unassigned packages. (Requires pre-assignment of all packages with notes!)")
+        print("0. Exit this program.")
+
+        user_choice = input("\n\nEnter a number and press \"Enter\" >")
+
+        check = False
+        if user_choice == "1":
+            check = True
+            self.review_packages_with_notes()
+        if user_choice == "2":
+            check = True
+            self.review_all_packages()
+        if user_choice == "3":
+            check = True
+            self.review_specific_package()
+        if user_choice == "4":
+            check = True
+            self.review_packages_temporal()
+        if user_choice == "5":
+            check = True
+            self.manual_package_assignment()
+        if user_choice == "6":
+            check = True
+            self.automatic_package_assignment()
+        if user_choice == "0":
+            sys.exit()
+        if check is False:
+            print("Invalid input! Please try again.")
+            print("\n")
+            input("Press ENTER to continue...")
+            self.draw_main()
+
+    def review_packages_with_notes(self):
+        pass  # TODO
+        time.sleep(2)
+        self.draw_main()
+
+    def review_all_packages(self):
+        pass  # TODO
+        time.sleep(2)
+        self.draw_main()
+
+    def review_specific_package(self):
+        pass  # TODO
+        time.sleep(2)
+        self.draw_main()
+
+    def review_packages_temporal(self):
+        pass  # TODO
+        time.sleep(2)
+        self.draw_main()
+
+    def manual_package_assignment(self):
+        pass  # TODO
+        time.sleep(2)
+        self.draw_main()
+
+    def automatic_package_assignment(self):
+        pass  # TODO
+        time.sleep(2)
+        self.draw_main()
+
+
+gui = GUI()
+gui.draw_main()
