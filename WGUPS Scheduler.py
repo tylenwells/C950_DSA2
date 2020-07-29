@@ -14,9 +14,10 @@ class Package:
         self.deadline = deadline
         self.weight = weight
         self.status = status
-        self.truck = 0  # If value of truck is 0, package has not yet been assigned to a truck.
+        self.route = 0  # If value of route is 0, package has not yet been assigned to a route.
         self.note = note
         self.assigned = False
+        self.bypass_flag = False
 
 
 class Destination:
@@ -32,18 +33,75 @@ class RouteNode:
 
     def __init__(self, package):
         self.package = package
+        self.vertex = None
+        for i in vertex_list:
+            if i.destination.address == self.package.destination.address:
+                self.vertex = i
         self.next = None
         self.previous = None
 
 
-class RouteList:
+class RouteList:   # TODO Check Linked List structure and make sure adding a node isn't overwriting the old tail.
 
-    def __init__(self):
-        self.truck = 0  # If value of truck is 0, this route has not had a truck assigned yet.
+    def __init__(self, truck: int, max_nodes=15):
+        self.truck = truck  # If value of truck is 0, this route has not had a truck assigned yet.
         self.head = None
         self.tail = None
+        self.size = 0
+        self.max_nodes = max_nodes  # This is the maximum number of packages allowed per route.
+        self.active = False
+        self.start_time = "0800"
+
+    def set_start_time(self, start_time: int):  # Ensures start time is set as an 4 digit number between 0800 and 1200.
+        if start_time > 1200 or start_time < 800:
+            return None
+        else:
+            buffered_time = str(start_time)
+            if buffered_time.__len__() == 3:
+                buffered_time = "0" + buffered_time
+            self.start_time = buffered_time
+
+    def add_node(self, new_node: RouteNode):
+        if self.size == 0:
+            self.head = new_node
+            self.tail = new_node
+            self.size = 1
+            self.active = True
+        else:
+            self.tail.next = new_node
+            self.tail = new_node
+            self.size = self.size + 1
+            self.sort_route(graph)
 
 
+    def sort_route(self, graph):
+        list_to_sort = []  # List to aggregate nodes that have been added to this route.
+        for r in range(self.size):  # Adds all nodes in route to the list.
+            buffer = r
+            node_to_add = self.head
+            while buffer < 0:
+                node_to_add = node_to_add.next
+            list_to_sort.append(node_to_add)
+        selected_node = (0.0, None)  # Buffer to hold highest distance node from Hub, this will be our first stop.
+        for node in list_to_sort:  # Get Distance from Hub to Node, store it if it's higher than selected_node.
+            distance = graph.edge_weights.get((vertex_list[0], node.vertex))
+            if distance > selected_node[0]:
+                selected_node = (distance, node)
+        self.head = selected_node[1]  # Adds furthest node to the head of the route. This will be our first stop.
+        self.tail = selected_node[1]
+        list_to_sort.remove(selected_node[1])  # Remove the head node from the list to sort as it has been sorted.
+        while list_to_sort.__len__() > 0:
+            selected_node = (0.0, None)
+            for node in list_to_sort:
+                distance = graph.edge_weights.get((self.tail.vertex, node.vertex))
+                if distance > selected_node[0]:
+                    selected_node = (distance, node)
+            self.tail.next = selected_node[1]
+            self.tail = selected_node[1]
+            list_to_sort.remove(selected_node[1])
+
+
+# noinspection PyRedeclaration
 class PackageHashTable:  # This hash table is meant to store the Package items, using the package_id as the key.
 
     def __init__(self, initial_capacity=64):
@@ -62,7 +120,7 @@ class PackageHashTable:  # This hash table is meant to store the Package items, 
         key = self._generate_key(package.id)
         self._add_to_list(key, package)
 
-    def insert(self, package: Package):
+    def insert(self, package: Package) -> None:
         package = package
         key = self._generate_key(package.id)
         self._add_to_list(key, package)
@@ -79,11 +137,11 @@ class PackageHashTable:  # This hash table is meant to store the Package items, 
         if reference_string is "unresolved":
             for value in range(self.table.__len__()):
                 if self.table[value].__len__() != 0 and len(self.table[value][0][1].note) != 0 and \
-                        self.table[value][0][1].assigned is False:
+                        self.table[value][0][1].route == 0:
                     count = count + 1
         if reference_string is "unassigned":
             for value in range(self.table.__len__()):
-                if self.table[value].__len__() != 0 and self.table[value][0][1].assigned is False:
+                if self.table[value].__len__() != 0 and self.table[value][0][1].route == 0:
                     count = count + 1
         return count
 
@@ -107,7 +165,7 @@ class PackageHashTable:  # This hash table is meant to store the Package items, 
             return None  # Return None if no package in the bucket.
         else:
             for c in self.table[key]:
-                if c[0] is package_id:
+                if c[0] == package_id:
                     return c[1]
         return None  # Return None if none of the existing packages in the bucket match the key provided.
 
@@ -236,6 +294,13 @@ for i in range(package_import_rows.__len__() - 2):
 
     package_hash_table.insert(p1)
 
+# Declare two routes for each truck. rX_0 runs first, rX_1 runs second(if needed).
+
+r1_0 = RouteList(1)
+r1_1 = RouteList(1)
+r2_0 = RouteList(2)
+r2_1 = RouteList(2)
+
 
 ##
 # GUI implementation starts here.
@@ -265,7 +330,7 @@ class GUI:
         print("Number of packages that are unassigned: " + str(package_hash_table.__count__("unassigned")))
 
         print("\nPlease choose an option:")
-        print("1. Review packages with notes. (Required before auto-assignment of packages can occur.)")
+        print("1. Review packages with notes. (Noted packages must be assigned before auto-assignment can occur.)")
         print("2. Review all packages.")
         print("3. View status of specific package.")
         print("4. View estimated status of all packages at a specified time.")
@@ -303,33 +368,230 @@ class GUI:
             self.draw_main()
 
     def review_packages_with_notes(self):
-        pass  # TODO
-        time.sleep(2)
-        self.draw_main()
+        self.clear()
+        package_list = []
+        for value in range(package_hash_table.table.__len__()):
+            if package_hash_table.table[value].__len__() != 0:
+                for a in package_hash_table.table[value]:
+                    if len(a[1].note) != 0:
+                        package_list.append((int(a[1].id), a[1]))
+        package_list.sort(key=lambda tup: tup[0])
+        print("\n All Packages with Notes:\n\nPackage ID\t\tDeliver To\t\t\t\t\t\t\t\t\tDeadline\tAssigned\tNote")
+        for package in package_list:
+            buffered_address = package[1].destination.address
+            address_offset = 40 - len(package[1].destination.address)
+            buffered_assignment = str(package[1].assigned)
+            if package[1].assigned is True and package[1].route != 0:
+                buffered_assignment = "Route " + str(package[1].route)[0] + "_" + str(package[1].route)[1]
+
+            for p in range(address_offset):
+                buffered_address = buffered_address + " "
+            print(package[1].id + "\t\t\t\t" + buffered_address + "\t" + package[1].deadline + "\t\t" +
+                  buffered_assignment + "\t\t" + package[1].note)
+        print("\nPlease choose an option:")
+        print("1. View details about or assign a specific package to a route.")
+        print("0. Return to main menu.")
+        user_choice = input("\n\nEnter a number and press \"Enter\" >")
+        check = False
+        if user_choice == "1":
+            check = True
+            self.review_specific_package()
+        if user_choice == "0":
+            self.draw_main()
+        if check is False:
+            print("Invalid input! Please try again.")
+            print("\n")
+            input("Press ENTER to continue...")
+            self.review_packages_with_notes()
 
     def review_all_packages(self):
-        pass  # TODO
-        time.sleep(2)
-        self.draw_main()
+        self.clear()
+        package_list = []
+        for value in range(package_hash_table.table.__len__()):
+            if package_hash_table.table[value].__len__() != 0:
+                for p in package_hash_table.table[value]:
+                    package_list.append((int(p[1].id), p[1]))
+        package_list.sort(key=lambda tup: tup[0])
+        print("\n All Packages:\n\nPackage ID\t\tDeliver To\t\t\t\t\t\t\t\t\tDeadline\tAssigned\tNote")
+        for package in package_list:
+            buffered_address = package[1].destination.address
+            address_offset = 40 - len(package[1].destination.address)
+            buffered_assignment = str(package[1].assigned)
+            if package[1].assigned == True and package[1].route != 0:
+                buffered_assignment = "Route " + str(package[1].route)
+            for p in range(address_offset):
+                buffered_address = buffered_address + " "
+            print(package[1].id + "\t\t\t\t" + buffered_address + "\t" + package[1].deadline + "\t\t" +
+                  buffered_assignment + "\t\t" + package[1].note)
+        print("\nPlease choose an option:")
+        print("1. View details about or assign a specific package to a route.")
+        print("0. Return to main menu.")
+        user_choice = input("\n\nEnter a number and press \"Enter\" >")
+        check = False
+        if user_choice == "1":
+            check = True
+            self.review_specific_package()
+        if user_choice == "0":
+            self.draw_main()
+        if check is False:
+            print("Invalid input! Please try again.")
+            print("\n")
+            input("Press ENTER to continue...")
+            self.review_all_packages()
 
     def review_specific_package(self):
-        pass  # TODO
-        time.sleep(2)
-        self.draw_main()
+        print('\nWhich Package ID would you like to review?:')
+        user_input = input("Please input a Package ID: >")
+        check = False
+        if user_input.isnumeric():
+            found_package = package_hash_table.lookup(user_input)
+            if found_package is not None:
+                check = True
+        if not check:
+            print("Package ID: " + user_input + " was not found. Please try again!")
+            self.review_specific_package()
+        self.clear()
+        print("Specific Package information for Package ID: " + user_input)
+        print("\nPackage ID: " + found_package.id + "\nDelivery Address: " + found_package.destination.address)
+        print("City: " + found_package.destination.city + "\nState: " + found_package.destination.state)
+        print("Zip-Code: " + found_package.destination.zip_code + "\nDelivery Deadline: " + found_package.deadline)
+        route_buffer = None
+        if found_package.route == 0:
+            route_buffer = "None"
+        else:
+            route_buffer = str(found_package.route)
+        print("Weight: " + found_package.weight + "\nStatus: " + found_package.status + "\nRoute: " + route_buffer)
+        print("Note: " + found_package.note)
+        if found_package.route == 0:
+            check = False
+            user_choice = None
+            while not check:
+                if user_choice is not None:
+                    print("Invalid input! Please try again.")
+                print("\nWould you like to assign this package to a route?\n Please enter 1 for \"yes\", and 0 for "
+                      "\"No\"")
+                user_choice = input()
+                if user_choice == "1":
+                    self.assign_package_to_route(found_package.id)
+                    check = True
+                if user_choice == "0":
+                    self.draw_main()
+        else:
+            print("\n")
+            input("This package has already been assigned to a route. Please press ENTER to return to the main menu.")
+            self.draw_main()
 
     def review_packages_temporal(self):
+        self.clear()
         pass  # TODO
         time.sleep(2)
         self.draw_main()
 
     def manual_package_assignment(self):
+        self.clear()
+        package_list = []
+        for value in range(package_hash_table.table.__len__()):
+            if package_hash_table.table[value].__len__() != 0:
+                for p in package_hash_table.table[value]:
+                    if p[1].assigned is False and p[1].route == 0:
+                        package_list.append((int(p[1].id), p[1]))
+        package_list.sort(key=lambda tup: tup[0])
+        print("\n All Unassigned Packages:\n\nPackage ID\t\tDeliver To\t\t\t\t\t\t\t\t\tDeadline\tAssigned\tNote")
+        for package in package_list:
+            buffered_address = package[1].destination.address
+            address_offset = 40 - len(package[1].destination.address)
+            buffered_assignment = str(package[1].assigned)
+            if package[1].assigned == True and package[1].route != 0:
+                buffered_assignment = "Route " + str(package[1].route)
+            for p in range(address_offset):
+                buffered_address = buffered_address + " "
+            print(package[1].id + "\t\t\t\t" + buffered_address + "\t" + package[1].deadline + "\t\t" +
+                  buffered_assignment + "\t\t" + package[1].note)
+        print("\nPlease choose an option:")
+        print("1. View details about or assign a specific package to a route.")
+        print("0. Return to main menu.")
+        user_choice = input("\n\nEnter a number and press \"Enter\" >")
+        check = False
+        if user_choice == "1":
+            check = True
+            self.review_specific_package()
+        if user_choice == "0":
+            self.draw_main()
+        if check is False:
+            print("Invalid input! Please try again.")
+            print("\n")
+            input("Press ENTER to continue...")
+            self.review_all_packages()
+
+    def automatic_package_assignment(self):
+        self.clear()
         pass  # TODO
         time.sleep(2)
         self.draw_main()
 
-    def automatic_package_assignment(self):
-        pass  # TODO
-        time.sleep(2)
+    def assign_package_to_route(self, package_id: int):
+        self.clear()
+        print("Add Package To Route:\n")
+        print("Which route would you like to add Package ID: " + str(package_id) + " to?")
+        count = 0
+        r10 = 0
+        r11 = 0
+        r20 = 0
+        r21 = 0
+        if r1_0.size < r1_0.max_nodes:
+            count = count + 1
+            r10 = count
+            print("\n" + str(count) + ". Truck 1, Route 1:\t\tPackages Assigned: " + str(r1_0.size) + "\tSpace Left: " +
+                  str(r1_0.max_nodes - r1_0.size) + "\tDeparting Time: " + str(r1_0.start_time))
+        if r1_1.size < r1_1.max_nodes:
+            count = count + 1
+            r11 = count
+            print("\n" + str(count) + ". Truck 1, Route 2:\t\tPackages Assigned: " + str(r1_1.size) + "\tSpace Left: " +
+                  str(r1_1.max_nodes - r1_1.size) + "\tDeparting Time: " + str(r1_1.start_time))
+        if r2_0.size < r2_0.max_nodes:
+            count = count + 1
+            r20 = count
+            print("\n" + str(count) + ". Truck 2, Route 1:\t\tPackages Assigned: " + str(r2_0.size) + "\tSpace Left: " +
+                  str(r2_0.max_nodes - r2_0.size) + "\tDeparting Time: " + str(r2_0.start_time))
+        if r2_1.size < r2_1.max_nodes:
+            count = count + 1
+            r21 = count
+            print("\n" + str(count) + ". Truck 1, Route 2:\t\tPackages Assigned: " + str(r2_1.size) + "\tSpace Left: " +
+                  str(r2_1.max_nodes - r2_1.size) + "\tDeparting Time: " + str(r2_1.start_time))
+        print("\n0. Exit\n")
+
+        check = False
+        user_input = None
+        while not check:
+            if user_input is not None:
+                "Invalid Input! Please try again."
+            user_input = input("Please enter a number to make a selection: >")
+            if user_input == str(r10):
+                package = package_hash_table.lookup(package_id)
+                r1_0.add_node(RouteNode(package))
+                package.route = 10
+                package.assigned = True
+                check = True
+            if user_input == str(r11):
+                package = package_hash_table.lookup(package_id)
+                r1_1.add_node(RouteNode(package))
+                package.route = 11
+                package.assigned = True
+                check = True
+            if user_input == str(r20):
+                package = package_hash_table.lookup(package_id)
+                r2_0.add_node(RouteNode(package))
+                package.route = 20
+                package.assigned = True
+                check = True
+            if user_input == str(r21):
+                package = package_hash_table.lookup(package_id)
+                r2_1.add_node(RouteNode(package))
+                package.route = 21
+                package.assigned = True
+                check = True
+            if user_input == "0":
+                check = True
         self.draw_main()
 
 
