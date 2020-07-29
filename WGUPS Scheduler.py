@@ -79,8 +79,9 @@ class RouteList:   # TODO Check Linked List structure and make sure adding a nod
         for r in range(self.size):  # Adds all nodes in route to the list.
             buffer = r
             node_to_add = self.head
-            while buffer < 0:
+            while buffer > 0:
                 node_to_add = node_to_add.next
+                buffer = buffer - 1
             list_to_sort.append(node_to_add)
         selected_node = (0.0, None)  # Buffer to hold highest distance node from Hub, this will be our first stop.
         for node in list_to_sort:  # Get Distance from Hub to Node, store it if it's higher than selected_node.
@@ -594,6 +595,58 @@ class GUI:
                 check = True
         self.draw_main()
 
+    def print_route_info(self): # PRINT ROUTE INFO
+        self.clear()
+        print("\nPlease select a route to show information for:")
+        print("\nPlease select a route to show information for: ")
+        count = 0
+        r10 = 0
+        r11 = 0
+        r20 = 0
+        r21 = 0
+        if r1_0.size < r1_0.max_nodes:
+            count = count + 1
+            r10 = count
+            print("\n" + str(count) + ". Truck 1, Route 1:\t\tPackages Assigned: " + str(r1_0.size) + "\tSpace Left: " +
+                  str(r1_0.max_nodes - r1_0.size) + "\tDeparting Time: " + str(r1_0.start_time))
+        if r1_1.size < r1_1.max_nodes:
+            count = count + 1
+            r11 = count
+            print("\n" + str(count) + ". Truck 1, Route 2:\t\tPackages Assigned: " + str(r1_1.size) + "\tSpace Left: " +
+                  str(r1_1.max_nodes - r1_1.size) + "\tDeparting Time: " + str(r1_1.start_time))
+        if r2_0.size < r2_0.max_nodes:
+            count = count + 1
+            r20 = count
+            print("\n" + str(count) + ". Truck 2, Route 1:\t\tPackages Assigned: " + str(r2_0.size) + "\tSpace Left: " +
+                  str(r2_0.max_nodes - r2_0.size) + "\tDeparting Time: " + str(r2_0.start_time))
+        if r2_1.size < r2_1.max_nodes:
+            count = count + 1
+            r21 = count
+            print("\n" + str(count) + ". Truck 1, Route 2:\t\tPackages Assigned: " + str(r2_1.size) + "\tSpace Left: " +
+                  str(r2_1.max_nodes - r2_1.size) + "\tDeparting Time: " + str(r2_1.start_time))
+        print("\n0. Exit\n")
+
+        check = False
+        user_input = None
+        while not check:
+            if user_input is not None:
+                "Invalid Input! Please try again."
+            user_input = input("Please enter a number to make a selection: >")
+            if user_input == str(r10):
+
+                check = True
+            if user_input == str(r11):
+
+                check = True
+            if user_input == str(r20):
+
+                check = True
+            if user_input == str(r21):
+
+                check = True
+            if user_input == "0":
+                check = True
+        self.draw_main()
 
 gui = GUI()
 gui.draw_main()
