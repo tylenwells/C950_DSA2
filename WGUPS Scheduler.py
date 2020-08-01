@@ -38,10 +38,9 @@ class RouteNode:
             if i.destination.address == self.package.destination.address:
                 self.vertex = i
         self.next = None
-        self.previous = None
 
 
-class RouteList:   # TODO Check Linked List structure and make sure adding a node isn't overwriting the old tail.
+class RouteList:
 
     def __init__(self, truck: int, max_nodes=15):
         self.truck = truck  # If value of truck is 0, this route has not had a truck assigned yet.
@@ -73,7 +72,6 @@ class RouteList:   # TODO Check Linked List structure and make sure adding a nod
             self.size = self.size + 1
             self.sort_route(graph)
 
-
     def sort_route(self, graph):
         list_to_sort = []  # List to aggregate nodes that have been added to this route.
         for r in range(self.size):  # Adds all nodes in route to the list.
@@ -100,6 +98,82 @@ class RouteList:   # TODO Check Linked List structure and make sure adding a nod
             self.tail.next = selected_node[1]
             self.tail = selected_node[1]
             list_to_sort.remove(selected_node[1])
+
+    def get_package_delivery_time(self, graph, node) -> str:
+        current = self.head
+        next = current.next
+        total_distance = graph.edge_weights.get((vertex_list[0], current.vertex))
+        for i in range(self.size):
+            if current == node:
+                start_time = self.start_time
+                time_to_add = (total_distance * 60) / 18
+                hours_to_add = int(time_to_add / 60)
+                minutes_to_add = round((time_to_add % 60) + int(start_time[2] + start_time[3]))
+                if minutes_to_add > 59:
+                    hours_to_add = hours_to_add + 1
+                    minutes_to_add = minutes_to_add - 60
+                start_hours = str(int(start_time[0:2]) + hours_to_add)
+                start_minutes = str(minutes_to_add)
+                if start_hours.__len__() != 2:
+                    start_hours = "0" + start_hours
+                if start_minutes.__len__() != 2:
+                    start_minutes = "0" + start_minutes
+                return start_hours + start_minutes
+            if current.next is not None:
+                total_distance = total_distance + graph.edge_weights.get((current.vertex, next.vertex))
+                current = current.next
+                next = current.next
+
+    def auto_assign_routes(self, route_number: int):
+        unassigned_packages = []
+        for value in range(package_hash_table.table.__len__()):  # Get list of all packages that are unassigned.
+            if package_hash_table.table[value].__len__() != 0:
+                for a in package_hash_table.table[value]:
+                    if a[1].route == "0":
+                        unassigned_packages.append(a[1])
+        if self.size == 0:  # If route has no nodes.
+            node_to_add = None
+            for package in unassigned_packages:  # Find furthest node and use it as starting node.
+                v = None
+                for i in vertex_list:
+                    if i.destination.address == package.destination.address:
+                        v = i
+                distance = graph.edge_weights.get((vertex_list[0], v))
+                if distance > node_to_add[0]:
+                    node_to_add = (distance, package)
+            self.add_node(RouteNode(node_to_add[1]))
+            node_to_add[1].route = route_number
+            node_to_add[1].assigned = True
+            unassigned_packages.remove(node_to_add[1])
+            node_to_add = None
+            while self.size < self.max_nodes:
+                for package in unassigned_packages:
+                    v = None
+                    for i in vertex_list:
+                        if i.destination.address == package.destination.address:
+                            v = i
+                    distance = graph.edge_weights.get((self.tail.vertex, v))
+                    if distance < node_to_add[0]:
+                        node_to_add = (distance, package)
+                self.add_node(RouteNode(node_to_add[1]))
+                node_to_add[1].route = route_number
+                node_to_add[1].assigned = True
+                unassigned_packages.remove(node_to_add[1])
+        else:
+            node_to_add = None
+            while self.size < self.max_nodes:
+                for package in unassigned_packages:
+                    v = None
+                    for i in vertex_list:
+                        if i.destination.address == package.destination.address:
+                            v = i
+                    distance = graph.edge_weights.get((self.tail.vertex, v))
+                    if distance < node_to_add[0]:
+                        node_to_add = (distance, package)
+                self.add_node(RouteNode(node_to_add[1]))
+                node_to_add[1].route = route_number
+                node_to_add[1].assigned = True
+                unassigned_packages.remove(node_to_add[1])
 
 
 # noinspection PyRedeclaration
@@ -337,6 +411,7 @@ class GUI:
         print("4. View estimated status of all packages at a specified time.")
         print("5. Manual Package Assignment")
         print("6. Automatically assign unassigned packages. (Requires pre-assignment of all packages with notes!)")
+        print("7. View specific route information.")
         print("0. Exit this program.")
 
         user_choice = input("\n\nEnter a number and press \"Enter\" >")
@@ -360,6 +435,9 @@ class GUI:
         if user_choice == "6":
             check = True
             self.automatic_package_assignment()
+        if user_choice == "7":
+            check = True
+            self.print_route_info()
         if user_choice == "0":
             sys.exit()
         if check is False:
@@ -484,8 +562,95 @@ class GUI:
 
     def review_packages_temporal(self):
         self.clear()
-        pass  # TODO
-        time.sleep(2)
+        print("Review status of all packages at a specific time: \n")
+        print("Please input the 4-digit 24-hour clock numeric time you would like to review package status at: ")
+        print("For example: for 2:00PM, please enter 1400. Alternative enter 9999 to exit to main menu.\n")
+        user_input = input()
+        check = False
+        if user_input == "9999":
+            check = True
+        while not check:
+            if not user_input.isnumeric() or user_input.__len__() != 4 or int(user_input[2:4]) > 60 or int(
+                    user_input[0:2]) > 23:
+
+                user_input = input("Invalid Input! Please try again.")
+                if user_input == "9999":
+                    break
+            else:
+                check = True
+        if user_input == "9999":
+            self.draw_main()
+        package_list = []
+        for value in range(package_hash_table.table.__len__()):
+            if package_hash_table.table[value].__len__() != 0:
+                for p in package_hash_table.table[value]:
+                    package_list.append((int(p[1].id), p[1]))
+        package_list.sort(key=lambda tup: tup[0])
+        for p in package_list:
+            if p[1].route == 0:  # If package is unassigned to a route.
+                print("Package ID: " + p[1].id + "\tRoute/Truck: Unassigned\t Status: Awaiting Assignment")
+            else:
+                if p[1].route == 10:
+                    status = ""
+                    node = r1_0.head
+                    while node.package.id != p[1].id:
+                        node = node.next
+                        if node is None:
+                            break
+                    if int(r1_0.get_package_delivery_time(graph, node)) < int(user_input):
+                        status = "Delivered"
+                    else:
+                        if int(r1_0.start_time) > int(user_input):
+                            status = "Awaiting Truck Departure"
+                        else:
+                            status = "Out for Delivery"
+                    print("Package ID: " + p[1].id + "\tRoute/Truck: Truck 1 Route 1\t Status: " + status)
+                if p[1].route == 11:
+                    status = ""
+                    node = r1_1.head
+                    while node.package.id != p[1].id:
+                        node = node.next
+                        if node is None:
+                            break
+                    if int(r1_1.get_package_delivery_time(graph, node)) < int(user_input):
+                        status = "Delivered"
+                    else:
+                        if int(r1_1.start_time) > int(user_input):
+                            status = "Awaiting Truck Departure"
+                        else:
+                            status = "Out for Delivery"
+                    print("Package ID: " + p[1].id + "\tRoute/Truck: Truck 1 Route 2\t Status: " + status)
+                if p[1].route == 20:
+                    status = ""
+                    node = r2_0.head
+                    while node.package.id != p[1].id:
+                        node = node.next
+                        if node is None:
+                            break
+                    if int(r2_0.get_package_delivery_time(graph, node)) < int(user_input):
+                        status = "Delivered"
+                    else:
+                        if int(r2_0.start_time) > int(user_input):
+                            status = "Awaiting Truck Departure"
+                        else:
+                            status = "Out for Delivery"
+                    print("Package ID: " + p[1].id + "\tRoute/Truck: Truck 2 Route 1\t Status: " + status)
+                if p[1].route == 21:
+                    status = ""
+                    node = r2_0.head
+                    while node.package.id != p[1].id:
+                        node = node.next
+                        if node is None:
+                            break
+                    if int(r2_0.get_package_delivery_time(graph, node)) < int(user_input):
+                        status = "Delivered"
+                    else:
+                        if int(r2_0.start_time) > int(user_input):
+                            status = "Awaiting Truck Departure"
+                        else:
+                            status = "Out for Delivery"
+                    print("Package ID: " + p[1].id + "\tRoute/Truck: Truck 2 Route 2\t Status: " + status)
+        input("Press ENTER to continue...")
         self.draw_main()
 
     def manual_package_assignment(self):
@@ -526,11 +691,27 @@ class GUI:
 
     def automatic_package_assignment(self):
         self.clear()
-        pass  # TODO
-        time.sleep(2)
+        package_list = []
+        for value in range(package_hash_table.table.__len__()):
+            if package_hash_table.table[value].__len__() != 0:
+                for a in package_hash_table.table[value]:
+                    if len(a[1].note) != 0 and a[1].route == "0":
+                        package_list.append((int(a[1].id), a[1]))
+        if package_list.__len__() > 0:
+            print("There are still packages with notes that have not been manually assigned.")
+            print("You must manually assign packages with notes before you can automatically assigning other packages.")
+            print()
+            input("Please press ENTER to continue...")
+        else:
+            r1_0.auto_assign_routes(10)
+            r2_0.auto_assign_routes(11)
+            r1_1.auto_assign_routes(20)
+            r2_1.auto_assign_routes(21)
+            print("Packages assigned successfully.")
+            input("Please press ENTER to continue.")
         self.draw_main()
 
-    def assign_package_to_route(self, package_id: int):
+    def assign_package_to_route(self, package_id: int):   # TODO Fix Algo/Function and check deadline times as well as second routes start times.
         self.clear()
         print("Add Package To Route:\n")
         print("Which route would you like to add Package ID: " + str(package_id) + " to?")
@@ -595,10 +776,9 @@ class GUI:
                 check = True
         self.draw_main()
 
-    def print_route_info(self): # PRINT ROUTE INFO
+    def print_route_info(self):  # PRINT ROUTE INFO
         self.clear()
         print("\nPlease select a route to show information for:")
-        print("\nPlease select a route to show information for: ")
         count = 0
         r10 = 0
         r11 = 0
@@ -633,20 +813,78 @@ class GUI:
                 "Invalid Input! Please try again."
             user_input = input("Please enter a number to make a selection: >")
             if user_input == str(r10):
-
                 check = True
+                self.clear()
+                print("\nRoute information for Truck 1 Route 1:\n")
+                if r1_0.size == 0:
+                    print("No packages assigned to Truck 1 Route 1!")
+                for i in range(r1_0.size):
+                    count_to_decrement = i
+                    node_to_print = r1_0.head
+                    while count_to_decrement > 0:
+                        node_to_print = node_to_print.next
+                        count_to_decrement = count_to_decrement - 1
+                    print("Delivery #" + str(i) + ".\t\tPackage ID: " + node_to_print.package.id + "\tApproximate "
+                                                                                                   "delivery time: " +
+                          r1_0.get_package_delivery_time(graph, node_to_print) + " Deadline Time: " + \
+                          node_to_print.package.deadline)
             if user_input == str(r11):
-
                 check = True
+                self.clear()
+                print("\nRoute information for Truck 1 Route 2:\n")
+                if r1_1.size == 0:
+                    print("No packages assigned to Truck 1 Route 2!")
+                for i in range(r1_1.size):
+                    count_to_decrement = i
+                    node_to_print = r1_1.head
+                    while count_to_decrement > 0:
+                        node_to_print = node_to_print.next
+                        count_to_decrement = count_to_decrement - 1
+                    print("Delivery #" + str(i) + ".\t\tPackage ID: " + node_to_print.package.id + "\tApproximate "
+                                                                                                   "delivery time: "
+                          + r1_1.get_package_delivery_time(graph, node_to_print) + " Deadline Time: " + \
+                          node_to_print.package.deadline)
             if user_input == str(r20):
-
                 check = True
+                self.clear()
+                print("\nRoute information for Truck 2 Route 1:\n")
+                if r2_0.size == 0:
+                    print("No packages assigned to Truck 2 Route 1!")
+                for i in range(r2_0.size):
+                    count_to_decrement = i
+                    node_to_print = r2_0.head
+                    while count_to_decrement > 0:
+                        node_to_print = node_to_print.next
+                        count_to_decrement = count_to_decrement - 1
+                    print("Delivery #" + str(i) + ".\t\tPackage ID: " + node_to_print.package.id + "\tApproximate "
+                                                                                                   "delivery time: "
+                          + r2_0.get_package_delivery_time(graph,
+                                                           node_to_print) + " Deadline Time: " \
+                          + node_to_print.package.deadline)
             if user_input == str(r21):
-
                 check = True
+                self.clear()
+                print("\nRoute information for Truck 2 Route 2:\n")
+                if r2_1.size == 0:
+                    print("No packages assigned to Truck 1 Route 2!")
+                for i in range(r2_1.size):
+                    count_to_decrement = i
+                    node_to_print = r2_1.head
+                    while count_to_decrement > 0:
+                        node_to_print = node_to_print.next
+                        count_to_decrement = count_to_decrement - 1
+                    print("Delivery #" + str(i) + ".\t\tPackage ID: " + node_to_print.package.id + "\tApproximate "
+                                                                                                   "delivery time: "
+                          + r2_1.get_package_delivery_time(graph,
+                                                           node_to_print) + " Deadline Time: "
+                          + node_to_print.package.deadline)
             if user_input == "0":
                 check = True
+            else:
+                input("\nPlease press ENTER to continue...")
         self.draw_main()
 
+
+r2_1.set_start_time(905)
 gui = GUI()
 gui.draw_main()
