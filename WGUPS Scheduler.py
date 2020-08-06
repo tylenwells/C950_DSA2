@@ -112,6 +112,41 @@ class RouteList:
             self.tail = selected_node[1]
             list_to_sort.remove(selected_node[1])
 
+        #
+        # Update Start Times of Route 2 for each Truck.
+        #
+        r1_0_last_package_time = self.get_package_delivery_time(graph, r1_0.tail)
+        r2_0_last_package_time = self.get_package_delivery_time(graph, r2_0.tail)
+        r1_0_minutes_to_add = (graph.edge_weights.get((vertex_list[0], r1_0.tail.vertex)) * 60) / 18
+        r2_0_minutes_to_add = (graph.edge_weights.get((vertex_list[0], r2_0.tail.vertex)) * 60) / 18
+        r1_0_hours_to_add = int(r1_0_minutes_to_add / 60)
+        r1_0_minutes_to_add = round((r1_0_minutes_to_add % 60) + int(r1_0_last_package_time[2]
+                                                                     + r1_0_last_package_time[3]))
+        if r1_0_minutes_to_add > 59:
+            r1_0_hours_to_add = r1_0_hours_to_add + 1
+            r1_0_minutes_to_add = r1_0_minutes_to_add - 60
+        r1_0_start_hours = str(int(r1_0_last_package_time[0:2]) + r1_0_hours_to_add)
+        r1_0_start_minutes = str(r1_0_minutes_to_add)
+        if r1_0_start_hours.__len__() != 2:
+            r1_0_start_hours = "0" + r1_0_start_hours
+        if r1_0_start_minutes.__len__() != 2:
+            r1_0_start_minutes = "0" + r1_0_start_minutes
+        r1_1.set_start_time(r1_0_start_hours + r1_0_start_minutes)
+
+        r2_0_hours_to_add = int(r2_0_minutes_to_add / 60)
+        r2_0_minutes_to_add = round((r2_0_minutes_to_add % 60) + int(r2_0_last_package_time[2]
+                                                                     + r2_0_last_package_time[3]))
+        if r2_0_minutes_to_add > 59:
+            r2_0_hours_to_add = r2_0_hours_to_add + 1
+            r2_0_minutes_to_add = r2_0_minutes_to_add - 60
+        r2_0_start_hours = str(int(r2_0_last_package_time[0:2]) + r2_0_hours_to_add)
+        r2_0_start_minutes = str(r2_0_minutes_to_add)
+        if r2_0_start_hours.__len__() != 2:
+            r2_0_start_hours = "0" + r2_0_start_hours
+        if r2_0_start_minutes.__len__() != 2:
+            r2_0_start_minutes = "0" + r2_0_start_minutes
+        r2_1.set_start_time(r2_0_start_hours + r2_0_start_minutes)
+
     def get_package_delivery_time(self, graph, node) -> str:
         current = self.head
         next = current.next
