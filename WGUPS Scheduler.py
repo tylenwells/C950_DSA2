@@ -60,16 +60,29 @@ class RouteList:
                 buffered_time = "0" + buffered_time
             self.start_time = buffered_time
 
-    def add_node(self, new_node: RouteNode):
-        if self.size == 0:
-            self.head = new_node
-            self.tail = new_node
-            self.size = 1
-            self.active = True
-        else:
-            self.tail.next = new_node
-            self.tail = new_node
-            self.size = self.size + 1
+    def add_node(self, new_node: RouteNode = None, new_node_list=None, *args):
+        if new_node is not None and new_node_list is None:
+            if self.size == 0:
+                self.head = new_node
+                self.tail = new_node
+                self.size = 1
+                self.active = True
+            else:
+                self.tail.next = new_node
+                self.tail = new_node
+                self.size = self.size + 1
+                self.sort_route(graph)
+        if new_node_list is not None and new_node is None:
+            if self.size == 0:
+                self.head = new_node_list[0]
+                self.tail = new_node_list[0]
+                self.size = 1
+                self.active = True
+                new_node_list.remove(new_node_list[0])
+            for node in new_node_list:
+                self.tail.next = node
+                self.tail = node
+                self.size = self.size + 1
             self.sort_route(graph)
 
     def sort_route(self, graph):
@@ -522,6 +535,7 @@ class GUI:
         print('\nWhich Package ID would you like to review?:')
         user_input = input("Please input a Package ID: >")
         check = False
+        found_package = None
         if user_input.isnumeric():
             found_package = package_hash_table.lookup(user_input)
             if found_package is not None:
@@ -711,7 +725,8 @@ class GUI:
             input("Please press ENTER to continue.")
         self.draw_main()
 
-    def assign_package_to_route(self, package_id: int):   # TODO Fix Algo/Function and check deadline times as well as second routes start times.
+    def assign_package_to_route(self, package_id: int):
+        # TODO Fix Algo/Function and check deadline times as well as second routes start times.
         self.clear()
         print("Add Package To Route:\n")
         print("Which route would you like to add Package ID: " + str(package_id) + " to?")
