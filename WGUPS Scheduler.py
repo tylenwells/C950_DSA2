@@ -831,8 +831,8 @@ class GUI:
             input("Please press ENTER to continue...")
         else:
             r1_0.auto_assign_routes(graph, 10)
-            r2_0.auto_assign_routes(graph, 11)
-            r1_1.auto_assign_routes(graph, 20)
+            r2_0.auto_assign_routes(graph, 20)
+            r1_1.auto_assign_routes(graph, 11)
             r2_1.auto_assign_routes(graph, 21)
             print("Packages assigned successfully.")
             input("Please press ENTER to continue.")
@@ -877,27 +877,27 @@ class GUI:
             user_input = input("Please enter a number to make a selection: >")
             if user_input == str(r10):
                 package = package_hash_table.lookup(package_id)
-                r1_0.add_node(RouteNode(package))
                 package.route = 10
                 package.assigned = True
+                r1_0.add_node(RouteNode(package))
                 check = True
             if user_input == str(r11):
                 package = package_hash_table.lookup(package_id)
-                r1_1.add_node(RouteNode(package))
                 package.route = 11
                 package.assigned = True
+                r1_1.add_node(RouteNode(package))
                 check = True
             if user_input == str(r20):
                 package = package_hash_table.lookup(package_id)
-                r2_0.add_node(RouteNode(package))
                 package.route = 20
                 package.assigned = True
+                r2_0.add_node(RouteNode(package))
                 check = True
             if user_input == str(r21):
                 package = package_hash_table.lookup(package_id)
-                r2_1.add_node(RouteNode(package))
                 package.route = 21
                 package.assigned = True
+                r2_1.add_node(RouteNode(package))
                 check = True
             if user_input == "0":
                 check = True
