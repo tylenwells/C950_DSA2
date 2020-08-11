@@ -37,6 +37,7 @@ class RouteNode:
         for i in vertex_list:
             if i.destination.address == self.package.destination.address:
                 self.vertex = i
+                break
         self.next = None
 
 
@@ -52,7 +53,7 @@ class RouteList:
         self.start_time = "0800"
 
     def set_start_time(self, start_time: int):  # Ensures start time is set as an 4 digit number between 0800 and 1200.
-        if start_time > 1200 or start_time < 800:
+        if start_time > 1700 or start_time < 800:
             return None
         else:
             buffered_time = str(start_time)
@@ -69,7 +70,7 @@ class RouteList:
                 self.active = True
             else:
                 self.tail.next = new_node
-                self.tail = new_node
+                self.tail = self.tail.next
                 self.size = self.size + 1
                 self.sort_route(graph)
         if new_node_list is not None and new_node is None:
@@ -81,12 +82,16 @@ class RouteList:
                 new_node_list.remove(new_node_list[0])
             for node in new_node_list:
                 self.tail.next = node
-                self.tail = node
+                self.tail = self.tail.next
                 self.size = self.size + 1
             self.sort_route(graph)
 
     def sort_route(self, graph):
         list_to_sort = []  # List to aggregate nodes that have been added to this route.
+        list_near_to = []
+        list_near_from = []
+        list_far_to = []
+        list_far_from = []
         for r in range(self.size):  # Adds all nodes in route to the list.
             buffer = r
             node_to_add = self.head
@@ -94,58 +99,134 @@ class RouteList:
                 node_to_add = node_to_add.next
                 buffer = buffer - 1
             list_to_sort.append(node_to_add)
-        selected_node = (0.0, None)  # Buffer to hold highest distance node from Hub, this will be our first stop.
-        for node in list_to_sort:  # Get Distance from Hub to Node, store it if it's higher than selected_node.
+        furthest_node = (0.0, None)  # Buffer to hold highest distance node from Hub.
+        for node in list_to_sort:  # Get Distance from Hub to Node, store it if it's higher than furthest_node.
             distance = graph.edge_weights.get((vertex_list[0], node.vertex))
-            if distance > selected_node[0]:
-                selected_node = (distance, node)
-        self.head = selected_node[1]  # Adds furthest node to the head of the route. This will be our first stop.
-        self.tail = selected_node[1]
-        list_to_sort.remove(selected_node[1])  # Remove the head node from the list to sort as it has been sorted.
-        while list_to_sort.__len__() > 0:
-            selected_node = (0.0, None)
-            for node in list_to_sort:
-                distance = graph.edge_weights.get((self.tail.vertex, node.vertex))
-                if distance > selected_node[0]:
-                    selected_node = (distance, node)
-            self.tail.next = selected_node[1]
-            self.tail = selected_node[1]
-            list_to_sort.remove(selected_node[1])
+            if distance > furthest_node[0]:
+                furthest_node = (distance, node)
+        list_to_sort.remove(furthest_node[1])
+        list_near_from.append(furthest_node[1])
+        list_near_from[0].next = None
+        for n in list_to_sort:
+            n.next = None
+            distance = graph.edge_weights.get((furthest_node[1].vertex, n.vertex))
+            if distance > furthest_node[0]:
+                if int(n.package.deadline) < 1200:
+                    list_far_to.append(n)
+                else:
+                    list_far_from.append(n)
+            else:
+                if int(n.package.deadline) < 1200:
+                    list_near_to.append(n)
+                else:
+                    list_near_from.append(n)
+
+        self.head = None
+        self.tail = None
+
+        while list_far_to.__len__() > 0:
+            closest_node = (9999.9, None)
+            for node in list_far_to:
+                if self.tail is not None:
+                    distance = graph.edge_weights.get((self.tail.vertex, node.vertex))
+                else:
+                    distance = graph.edge_weights.get((vertex_list[0], node.vertex))
+                if distance < closest_node[0]:
+                    closest_node = (distance, node)
+            if self.head is None:
+                self.head = closest_node[1]
+            if self.tail is not None:
+                self.tail.next = closest_node[1]
+            self.tail = closest_node[1]
+            list_far_to.remove(closest_node[1])
+
+        while list_far_from.__len__() > 0:
+            closest_node = (9999.9, None)
+            for node in list_far_from:
+                if self.tail is not None:
+                    distance = graph.edge_weights.get((self.tail.vertex, node.vertex))
+                else:
+                    distance = graph.edge_weights.get((vertex_list[0], node.vertex))
+                if distance < closest_node[0]:
+                    closest_node = (distance, node)
+            if self.head is None:
+                self.head = closest_node[1]
+            if self.tail is not None:
+                self.tail.next = closest_node[1]
+            self.tail = closest_node[1]
+            list_far_from.remove(closest_node[1])
+
+        while list_near_to.__len__() > 0:
+            closest_node = (9999.9, None)
+            for node in list_near_to:
+                if self.tail is not None:
+                    distance = graph.edge_weights.get((self.tail.vertex, node.vertex))
+                else:
+                    distance = graph.edge_weights.get((vertex_list[0], node.vertex))
+                if distance < closest_node[0]:
+                    closest_node = (distance, node)
+            if self.head is None:
+                self.head = closest_node[1]
+            if self.tail is not None:
+                self.tail.next = closest_node[1]
+            self.tail = closest_node[1]
+            list_near_to.remove(closest_node[1])
+
+        while list_near_from.__len__() > 0:
+            closest_node = (9999.9, None)
+            for node in list_near_from:
+                if self.tail is not None:
+                    distance = graph.edge_weights.get((self.tail.vertex, node.vertex))
+                else:
+                    distance = graph.edge_weights.get((vertex_list[0], node.vertex))
+                if distance < closest_node[0]:
+                    closest_node = (distance, node)
+            if self.head is None:
+                self.head = closest_node[1]
+            if self.tail is not None:
+                self.tail.next = closest_node[1]
+            self.tail = closest_node[1]
+            list_near_from.remove(closest_node[1])
 
         #
         # Update Start Times of Route 2 for each Truck.
+        # This sets the second route start time to the trucks arrival back to the hub after delivering the last package.
         #
-        r1_0_last_package_time = self.get_package_delivery_time(graph, r1_0.tail)
-        r2_0_last_package_time = self.get_package_delivery_time(graph, r2_0.tail)
-        r1_0_minutes_to_add = (graph.edge_weights.get((vertex_list[0], r1_0.tail.vertex)) * 60) / 18
-        r2_0_minutes_to_add = (graph.edge_weights.get((vertex_list[0], r2_0.tail.vertex)) * 60) / 18
-        r1_0_hours_to_add = int(r1_0_minutes_to_add / 60)
-        r1_0_minutes_to_add = round((r1_0_minutes_to_add % 60) + int(r1_0_last_package_time[2]
-                                                                     + r1_0_last_package_time[3]))
-        if r1_0_minutes_to_add > 59:
-            r1_0_hours_to_add = r1_0_hours_to_add + 1
-            r1_0_minutes_to_add = r1_0_minutes_to_add - 60
-        r1_0_start_hours = str(int(r1_0_last_package_time[0:2]) + r1_0_hours_to_add)
-        r1_0_start_minutes = str(r1_0_minutes_to_add)
-        if r1_0_start_hours.__len__() != 2:
-            r1_0_start_hours = "0" + r1_0_start_hours
-        if r1_0_start_minutes.__len__() != 2:
-            r1_0_start_minutes = "0" + r1_0_start_minutes
-        r1_1.set_start_time(r1_0_start_hours + r1_0_start_minutes)
+        if r1_0.size != 0:
+            r1_0_last_package_time = r1_0.get_package_delivery_time(graph, r1_0.tail)
+            r1_0_minutes_to_add = (graph.edge_weights.get((vertex_list[0], r1_0.tail.vertex)) * 60) / 18
 
-        r2_0_hours_to_add = int(r2_0_minutes_to_add / 60)
-        r2_0_minutes_to_add = round((r2_0_minutes_to_add % 60) + int(r2_0_last_package_time[2]
-                                                                     + r2_0_last_package_time[3]))
-        if r2_0_minutes_to_add > 59:
-            r2_0_hours_to_add = r2_0_hours_to_add + 1
-            r2_0_minutes_to_add = r2_0_minutes_to_add - 60
-        r2_0_start_hours = str(int(r2_0_last_package_time[0:2]) + r2_0_hours_to_add)
-        r2_0_start_minutes = str(r2_0_minutes_to_add)
-        if r2_0_start_hours.__len__() != 2:
-            r2_0_start_hours = "0" + r2_0_start_hours
-        if r2_0_start_minutes.__len__() != 2:
-            r2_0_start_minutes = "0" + r2_0_start_minutes
-        r2_1.set_start_time(r2_0_start_hours + r2_0_start_minutes)
+            r1_0_hours_to_add = int(r1_0_minutes_to_add / 60)
+            r1_0_minutes_to_add = round((r1_0_minutes_to_add % 60) + int(r1_0_last_package_time[2]
+                                                                         + r1_0_last_package_time[3]))
+            if r1_0_minutes_to_add > 59:
+                r1_0_hours_to_add = r1_0_hours_to_add + 1
+                r1_0_minutes_to_add = r1_0_minutes_to_add - 60
+            r1_0_start_hours = str(int(r1_0_last_package_time[0:2]) + r1_0_hours_to_add)
+            r1_0_start_minutes = str(r1_0_minutes_to_add)
+            if r1_0_start_hours.__len__() != 2:
+                r1_0_start_hours = "0" + r1_0_start_hours
+            if r1_0_start_minutes.__len__() != 2:
+                r1_0_start_minutes = "0" + r1_0_start_minutes
+            r1_1.set_start_time(int(r1_0_start_hours + r1_0_start_minutes))
+
+        if r2_0.size != 0:
+            r2_0_last_package_time = r2_0.get_package_delivery_time(graph, r2_0.tail)
+            r2_0_minutes_to_add = (graph.edge_weights.get((vertex_list[0], r2_0.tail.vertex)) * 60) / 18
+
+            r2_0_hours_to_add = int(r2_0_minutes_to_add / 60)
+            r2_0_minutes_to_add = round((r2_0_minutes_to_add % 60) + int(r2_0_last_package_time[2]
+                                                                         + r2_0_last_package_time[3]))
+            if r2_0_minutes_to_add > 59:
+                r2_0_hours_to_add = r2_0_hours_to_add + 1
+                r2_0_minutes_to_add = r2_0_minutes_to_add - 60
+            r2_0_start_hours = str(int(r2_0_last_package_time[0:2]) + r2_0_hours_to_add)
+            r2_0_start_minutes = str(r2_0_minutes_to_add)
+            if r2_0_start_hours.__len__() != 2:
+                r2_0_start_hours = "0" + r2_0_start_hours
+            if r2_0_start_minutes.__len__() != 2:
+                r2_0_start_minutes = "0" + r2_0_start_minutes
+            r2_1.set_start_time(int(r2_0_start_hours + r2_0_start_minutes))
 
     def get_package_delivery_time(self, graph, node) -> str:
         current = self.head
@@ -172,56 +253,51 @@ class RouteList:
                 current = current.next
                 next = current.next
 
-    def auto_assign_routes(self, route_number: int):
+    def auto_assign_routes(self, graph, route_number: int):
+        graph = graph
         unassigned_packages = []
         for value in range(package_hash_table.table.__len__()):  # Get list of all packages that are unassigned.
             if package_hash_table.table[value].__len__() != 0:
                 for a in package_hash_table.table[value]:
-                    if a[1].route == "0":
+                    if a[1].route == 0:
                         unassigned_packages.append(a[1])
-        if self.size == 0:  # If route has no nodes.
-            node_to_add = None
-            for package in unassigned_packages:  # Find furthest node and use it as starting node.
-                v = None
-                for i in vertex_list:
-                    if i.destination.address == package.destination.address:
-                        v = i
-                distance = graph.edge_weights.get((vertex_list[0], v))
-                if distance > node_to_add[0]:
-                    node_to_add = (distance, package)
-            self.add_node(RouteNode(node_to_add[1]))
-            node_to_add[1].route = route_number
-            node_to_add[1].assigned = True
-            unassigned_packages.remove(node_to_add[1])
-            node_to_add = None
-            while self.size < self.max_nodes:
-                for package in unassigned_packages:
-                    v = None
-                    for i in vertex_list:
-                        if i.destination.address == package.destination.address:
-                            v = i
-                    distance = graph.edge_weights.get((self.tail.vertex, v))
-                    if distance < node_to_add[0]:
-                        node_to_add = (distance, package)
-                self.add_node(RouteNode(node_to_add[1]))
-                node_to_add[1].route = route_number
-                node_to_add[1].assigned = True
-                unassigned_packages.remove(node_to_add[1])
+        remaining_capacity = self.max_nodes - self.size
+        if remaining_capacity == 0 or unassigned_packages.__len__() == 0:
+            return
         else:
-            node_to_add = None
-            while self.size < self.max_nodes:
+            nodes_to_add = []
+            packages_with_deadlines = []
+            for package in unassigned_packages:
+                if package.deadline != "1700":
+                    packages_with_deadlines.append(package)
+                    unassigned_packages.remove(package)
+            if packages_with_deadlines.__len__() <= remaining_capacity:
+                for p in packages_with_deadlines:
+                    p = RouteNode(p)
+                    nodes_to_add.append(p)
+                remaining_capacity = remaining_capacity - nodes_to_add.__len__()
+            else:
+                while remaining_capacity > 0 and packages_with_deadlines.__len__() > 0:
+                    node_buffer = RouteNode(packages_with_deadlines.pop(0))
+                    nodes_to_add.append(node_buffer)
+                    remaining_capacity = (self.max_nodes - self.size) - nodes_to_add.__len__()
+            if remaining_capacity > 0:
+                tuple_list = []
                 for package in unassigned_packages:
-                    v = None
-                    for i in vertex_list:
-                        if i.destination.address == package.destination.address:
-                            v = i
-                    distance = graph.edge_weights.get((self.tail.vertex, v))
-                    if distance < node_to_add[0]:
-                        node_to_add = (distance, package)
-                self.add_node(RouteNode(node_to_add[1]))
-                node_to_add[1].route = route_number
-                node_to_add[1].assigned = True
-                unassigned_packages.remove(node_to_add[1])
+                    package = RouteNode(package)
+                    distance = graph.edge_weights.get((package.vertex, vertex_list[0]))
+                    tuple_list.append((distance, package))
+                tuple_list.sort(key=lambda tup: tup[0])
+                while remaining_capacity > 0 and tuple_list.__len__() > 0:
+                    for t in tuple_list:
+                        if tuple_list.__len__() == 0 or remaining_capacity == 0:
+                            break
+                        nodes_to_add.append(tuple_list.pop(0)[1])
+                        remaining_capacity = remaining_capacity - 1
+            for node in nodes_to_add:
+                node.package.route = route_number
+                node.package.assigned = True
+            self.add_node(new_node_list=nodes_to_add)
 
 
 # noinspection PyRedeclaration
@@ -609,7 +685,9 @@ class GUI:
             input("This package has already been assigned to a route. Please press ENTER to return to the main menu.")
             self.draw_main()
 
-    def review_packages_temporal(self):
+    def review_packages_temporal(self):  # TODO Take a look at this. This didn't work after everything else was ok.
+        # TODO TypeError: int() argument must be a string, a bytes-like object or a number, not 'NoneType' line 744
+        # TODO  if int(r1_1.get_package_delivery_time(graph, node)) < int(user_input):
         self.clear()
         print("Review status of all packages at a specific time: \n")
         print("Please input the 4-digit 24-hour clock numeric time you would like to review package status at: ")
@@ -619,7 +697,7 @@ class GUI:
         if user_input == "9999":
             check = True
         while not check:
-            if not user_input.isnumeric() or user_input.__len__() != 4 or int(user_input[2:4]) > 60 or int(
+            if not user_input.isnumeric() or user_input.__len__() != 4 or int(user_input[2:4]) > 59 or int(
                     user_input[0:2]) > 23:
 
                 user_input = input("Invalid Input! Please try again.")
@@ -752,16 +830,15 @@ class GUI:
             print()
             input("Please press ENTER to continue...")
         else:
-            r1_0.auto_assign_routes(10)
-            r2_0.auto_assign_routes(11)
-            r1_1.auto_assign_routes(20)
-            r2_1.auto_assign_routes(21)
+            r1_0.auto_assign_routes(graph, 10)
+            r2_0.auto_assign_routes(graph, 11)
+            r1_1.auto_assign_routes(graph, 20)
+            r2_1.auto_assign_routes(graph, 21)
             print("Packages assigned successfully.")
             input("Please press ENTER to continue.")
         self.draw_main()
 
     def assign_package_to_route(self, package_id: int):
-        # TODO Fix Algo/Function and check deadline times as well as second routes start times.
         self.clear()
         print("Add Package To Route:\n")
         print("Which route would you like to add Package ID: " + str(package_id) + " to?")
@@ -834,17 +911,17 @@ class GUI:
         r11 = 0
         r20 = 0
         r21 = 0
-        if r1_0.size < r1_0.max_nodes:
+        if r1_0.size <= r1_0.max_nodes:
             count = count + 1
             r10 = count
             print("\n" + str(count) + ". Truck 1, Route 1:\t\tPackages Assigned: " + str(r1_0.size) + "\tSpace Left: " +
                   str(r1_0.max_nodes - r1_0.size) + "\tDeparting Time: " + str(r1_0.start_time))
-        if r1_1.size < r1_1.max_nodes:
+        if r1_1.size <= r1_1.max_nodes:
             count = count + 1
             r11 = count
             print("\n" + str(count) + ". Truck 1, Route 2:\t\tPackages Assigned: " + str(r1_1.size) + "\tSpace Left: " +
                   str(r1_1.max_nodes - r1_1.size) + "\tDeparting Time: " + str(r1_1.start_time))
-        if r2_0.size < r2_0.max_nodes:
+        if r2_0.size <= r2_0.max_nodes:
             count = count + 1
             r20 = count
             print("\n" + str(count) + ". Truck 2, Route 1:\t\tPackages Assigned: " + str(r2_0.size) + "\tSpace Left: " +
@@ -878,6 +955,27 @@ class GUI:
                                                                                                    "delivery time: " +
                           r1_0.get_package_delivery_time(graph, node_to_print) + " Deadline Time: " + \
                           node_to_print.package.deadline)
+                print("\nWould you like to make any changes to the start time of this route?\n")
+                print("1. Yes\nAny other input: No")
+                time_change_choice = input("Please enter a number to make a selection:")
+                if time_change_choice == "1":
+                    time_check = False
+                    time_input = None
+                    while not time_check:
+                        print("What time would you like the route to start?")
+                        print("Please provide the time in 4-digit 24-hour time:")
+                        print("For example: for 2:00PM, please enter 1400. Alternative enter 9999 to exit to main menu."
+                              "\n")
+                        time_input = input()
+                        if time_input == "9999":
+                            break
+                        if not time_input.isnumeric() or time_input.__len__() != 4 or int(
+                                time_input[2:4]) > 59 or int(
+                            time_input[0:2]) > 23:
+                            print("Invalid input! Please try again.")
+                        else:
+                            time_check = True
+                    r1_0.set_start_time(int(time_input))
             if user_input == str(r11):
                 check = True
                 self.clear()
@@ -911,6 +1009,27 @@ class GUI:
                           + r2_0.get_package_delivery_time(graph,
                                                            node_to_print) + " Deadline Time: " \
                           + node_to_print.package.deadline)
+                print("\nWould you like to make any changes to the start time of this route?\n")
+                print("1. Yes\nAny other input: No")
+                time_change_choice = input("Please enter a number to make a selection:")
+                if time_change_choice == "1":
+                    time_check = False
+                    time_input = None
+                    while not time_check:
+                        print("What time would you like the route to start?")
+                        print("Please provide the time in 4-digit 24-hour time:")
+                        print("For example: for 2:00PM, please enter 1400. Alternative enter 9999 to exit to main menu."
+                              "\n")
+                        time_input = input()
+                        if time_input == "9999":
+                            break
+                        if not time_input.isnumeric() or time_input.__len__() != 4 or int(
+                                time_input[2:4]) > 59 or int(
+                            time_input[0:2]) > 23:
+                            print("Invalid input! Please try again.")
+                        else:
+                            time_check = True
+                    r2_0.set_start_time(int(time_input))
             if user_input == str(r21):
                 check = True
                 self.clear()
@@ -935,6 +1054,5 @@ class GUI:
         self.draw_main()
 
 
-r2_1.set_start_time(905)
 gui = GUI()
 gui.draw_main()
