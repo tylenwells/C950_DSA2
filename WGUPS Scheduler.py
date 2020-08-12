@@ -1,5 +1,8 @@
 # Tylen Wells twell56
 
+# Worst Case Runtime Complexity of program is O(N^2).
+
+
 import csv
 from os import system, name
 import time
@@ -35,7 +38,7 @@ class Destination:
         self.state = state
         self.zip_code = zip_code
 
-#
+
 class RouteNode:
     # Nodes of the RouteList linked list class. contains package and vertex elements for data, as well as pointing to
     # the .next node in the linked list.
@@ -73,7 +76,7 @@ class RouteList:
                 buffered_time = "0" + buffered_time  # e.g. "800" becomes "0800"
             self.start_time = buffered_time  # Set start time to the formatted string time.
 
-    # Complexity: O(logN), This is because add_node() calls self.sort_route() which has a complexity of O(logN).
+    # Complexity: O(N^2), This is because add_node() calls self.sort_route() which has a complexity of O(logN).
     def add_node(self, new_node: RouteNode = None, new_node_list=None, *args):  # Adds node(s) to the linked list.
         if new_node is not None and new_node_list is None:  # If a node (singular) is passed but not a list of nodes.
             if self.size == 0:  # If list doesn't currently contain any nodes, new node is also the head and tail.
@@ -99,7 +102,7 @@ class RouteList:
                 self.size = self.size + 1
             self.sort_route(graph)  # Sort.
 
-    # Complexity: O(logN)
+    # Complexity: O(N^2)
     def sort_route(self, graph):  # The primary sorting algorithm for ordering deliveries is done here.
         list_to_sort = []  # List to aggregate nodes that have been added to this route.
 
@@ -329,8 +332,8 @@ class RouteList:
                 current = current.next
                 next = current.next
 
-    # TODO Finish writing up time complexity for the rest of the program. Start on the paperwork.
-    def auto_assign_routes(self, graph, route_number: int):   # Automatically adds more nodes to the specified route.
+    # Complexity: O(N)
+    def auto_assign_routes(self, graph, route_number: int):  # Automatically adds more nodes to the specified route.
         # This will add nodes until it runs out of unassigned nodes, or the truck is full.
         #
         # This assignment prioritizes those packages with deadlines before those without.
@@ -363,12 +366,12 @@ class RouteList:
                 for p in packages_with_deadlines:
                     p = RouteNode(p)
                     nodes_to_add.append(p)
-                remaining_capacity = remaining_capacity - nodes_to_add.__len__()   # Update remaining_capacity.
-            else:   # Otherwise, add packages individually until you run out of space.
+                remaining_capacity = remaining_capacity - nodes_to_add.__len__()  # Update remaining_capacity.
+            else:  # Otherwise, add packages individually until you run out of space.
                 while remaining_capacity > 0 and packages_with_deadlines.__len__() > 0:
                     node_buffer = RouteNode(packages_with_deadlines.pop(0))
                     nodes_to_add.append(node_buffer)
-                    remaining_capacity = (self.max_nodes - self.size) - nodes_to_add.__len__()   # Update capacity.
+                    remaining_capacity = (self.max_nodes - self.size) - nodes_to_add.__len__()  # Update capacity.
 
             # If you still have space after adding packages with deadlines, add the rest using a simple greedy algorithm
             # weighted based upon distance.
@@ -394,32 +397,51 @@ class RouteList:
             # Add list of nodes to the route, which will sort them properly.
             self.add_node(new_node_list=nodes_to_add)
 
+    # Complexity: O(N)
+    def get_miles(self, graph) -> int:
+        distance = 0
+        current = self.head
+        if current is not None:
+            distance = graph.edge_weights.get((current.vertex, vertex_list[0]))
+        for i in range(self.size):
+            if current.next is None:
+                break
+            distance_to_add = graph.edge_weights.get((current.vertex, current.next.vertex))
+            distance = distance + distance_to_add
+            current = current.next
+        return distance
+
 
 # noinspection PyRedeclaration
 class PackageHashTable:  # This hash table is meant to store the Package items, using the package_id as the key.
 
+    # Complexity: O(C)
     def __init__(self, initial_capacity=64):  # Set the initial capacity of the hash table to 64.
         self.table = []
         for i in range(initial_capacity):  # Fill list with (initial_capacity) empty lists as bucket placeholders.
             self.table.append([])
 
+    # Complexity: O(C)
     def _generate_key(self, key):  # This takes the int conversion of str package id * 9001 and takes % 64 as the key.
         int_key = int(key)
         self.key_buffer = int_key * 9001
         return self.key_buffer % 64
 
     # Requirement E is satisfied with this insert function.
+    # Complexity: O(C)
     def insert(self, package_id, address, deadline, city, state, zip_code, weight, status, note=""):
         destination = Destination(address, city, state, zip_code)
         package = Package(package_id, destination, deadline, weight, status, note)
         key = self._generate_key(package.id)
         self._add_to_list(key, package)
 
+    # Complexity: O(C)
     def insert(self, package: Package) -> None:  # This is a convenience function that takes a "Package" obj instead.
         package = package
         key = self._generate_key(package.id)
         self._add_to_list(key, package)
 
+    # Complexity: O(N)
     def __count__(self, reference_string="") -> int:  # Function to return the count of packages of certain types.
         count = 0
         if reference_string is "":  # All packages.
@@ -440,6 +462,7 @@ class PackageHashTable:  # This hash table is meant to store the Package items, 
                     count = count + 1
         return count
 
+    # Complexity: O(N) (Worst case. Typically is O(1))
     def _add_to_list(self, key, package: Package):  # Internal function to add a package to the list via the key.
 
         if self.table[key].__len__() is 0:  # If bucket has no items, append new item to empty list.
@@ -454,6 +477,7 @@ class PackageHashTable:  # This hash table is meant to store the Package items, 
             if check is False:
                 self.table[key].append((package.id, package))  # If no matching key is found, append new item to list.
 
+    # Complexity: O(N) (Worst case. Typically O(1))
     def lookup(self, package_id):  # This returns the package class item containing the entity-specific data elements.
         key = self._generate_key(package_id)
         if self.table[key].__len__() is 0:
@@ -472,25 +496,30 @@ class PackageHashTable:  # This hash table is meant to store the Package items, 
 
 class Vertex:
 
+    # Complexity: O(C)
     def __init__(self, destination):
         self.destination = destination
 
 
 class Graph:
 
+    # Complexity: O(C)
     def __init__(self):
         self.adjacency_list = {}
         self.edge_weights = {}
 
+    # Complexity: O(C)
     def add_vertex(self, new_vertex: Vertex):
         self.adjacency_list[new_vertex] = []
 
+    # Complexity: O(C)
     def add_directed_edge(self, from_vertex: Vertex, to_vertex: Vertex, weight: float = 1.0):
         if not self.adjacency_list.__contains__(from_vertex):
             self.add_vertex(from_vertex)
         self.edge_weights[(from_vertex, to_vertex)] = weight
         self.adjacency_list[from_vertex].append(to_vertex)
 
+    # Complexity: O(C)
     def add_undirected_edge(self, from_vertex: Vertex, to_vertex: Vertex, weight: float = 1.0):
         self.add_directed_edge(from_vertex, to_vertex, weight)
         self.add_directed_edge(to_vertex, from_vertex, weight)
@@ -502,6 +531,7 @@ class Graph:
 
 
 # Read the CSV File for distance and load data.
+# Complexity: O(N)
 
 with open('WGUPS Distance Table.csv', newline='') as distance_csv_file:
     distance_reader = csv.reader(distance_csv_file, dialect='excel')
@@ -510,6 +540,7 @@ with open('WGUPS Distance Table.csv', newline='') as distance_csv_file:
         distance_import_rows.append(row)
 
 # Read the CSV file for packages and load data.
+# Complexity: O(N)
 
 with open('WGUPS Package File.csv', newline='') as package_csv_file:
     package_reader = csv.reader(package_csv_file, dialect='excel')
@@ -518,7 +549,7 @@ with open('WGUPS Package File.csv', newline='') as package_csv_file:
         package_import_rows.append(row)
 
 # Load distance data and destinations into graph data structure.
-
+# Complexity: O(N)
 destination_list = []
 vertex_list = []
 
@@ -536,15 +567,22 @@ for i in range(distance_import_rows.__len__() - 1):  # Populate "destination_lis
                      distance_import_rows[i + 1][1][return_index + 2:return_index + 7])
     destination_list.append(d1)
 
-for d in destination_list:  # Populate "vertex_list" with a unique vertex for each destination.
+# Populate "vertex_list" with a unique vertex for each destination.
+# Complexity: O(N)
+for d in destination_list:
     v1 = Vertex(d)
     vertex_list.append(v1)
 
-graph = Graph()  # "graph" will be our data structure to store distances. This is an undirected, weighted graph.
+# "graph" will be our data structure to store distances. This is an undirected, weighted graph.
+# Complexity: O(C)
+graph = Graph()
 
-for v in vertex_list:  # Add vertexes to "graph"
+# Add vertexes to "graph"
+# Complexity: O(N)
+for v in vertex_list:
     graph.add_vertex(v)
 
+# Complexity: O(N)
 for i in range(distance_import_rows.__len__() - 1):  # This creates the undirected edges to hold the distance weights.
     values_to_process = i + 1
     for c in range(values_to_process):
@@ -552,7 +590,7 @@ for i in range(distance_import_rows.__len__() - 1):  # This creates the undirect
         graph.add_undirected_edge(vertex_list[i], vertex_list[c], distance_value)
 
 # Load package data into hash table.
-
+# Complexity: O(NlogN)
 package_hash_table = PackageHashTable()  # This is the instantiated hash table used to store package data.
 
 for i in range(package_import_rows.__len__() - 2):
@@ -591,6 +629,7 @@ for i in range(package_import_rows.__len__() - 2):
     package_hash_table.insert(p1)  # Insert package object into hash table.
 
 # Declare two routes for each truck. rX_0 runs first, rX_1 runs second(if needed).
+# Complexity: O(C)
 
 r1_0 = RouteList(1)
 r1_1 = RouteList(1)
@@ -603,18 +642,22 @@ r2_1 = RouteList(2)
 ##
 
 class GUI:
+
+    # Complexity: O(C)
     def __init__(self):
         # GUI Class init method is blank and the class has no data members as it is a functional class
         # and not a data-storage class. This is only used to display a GUI for user interaction.
         pass
 
     @staticmethod
+    # Complexity: O(C)
     def clear():  # Clear screen, works for both unix based and windows operating systems.
         if name == 'nt':
             _ = system('cls')
         if name == 'posix':
             _ = system('clear')
 
+    # Complexity: O(N)
     def draw_main(self):  # Prints a main menu for users to interact with by choosing an option or inputting data.
 
         self.clear()
@@ -626,6 +669,8 @@ class GUI:
         print("Number of Packages with notes: " + str(package_hash_table.__count__("note")))
         print("Number of Packages with notes awaiting resolution: " + str(package_hash_table.__count__("unresolved")))
         print("Number of packages that are unassigned: " + str(package_hash_table.__count__("unassigned")))
+        print("Total estimated number of miles: " + str(r1_0.get_miles(graph) + r1_1.get_miles(graph) +
+                                                        r2_0.get_miles(graph) + r2_1.get_miles(graph)))
 
         print("\nPlease choose an option:")
         print("1. Review packages with notes. (Noted packages must be assigned before auto-assignment can occur.)")
@@ -671,6 +716,7 @@ class GUI:
             input("Press ENTER to continue...")
             self.draw_main()
 
+    # Complexity: O(N)
     def review_packages_with_notes(self):
         self.clear()  # Clear screen.
         package_list = []
@@ -714,6 +760,7 @@ class GUI:
             input("Press ENTER to continue...")
             self.review_packages_with_notes()
 
+    # Complexity: O(N)
     def review_all_packages(self):
         self.clear()  # Clear screen.
         package_list = []
@@ -757,6 +804,7 @@ class GUI:
             input("Press ENTER to continue...")
             self.review_all_packages()
 
+    # Complexity: O(C)
     def review_specific_package(self):
 
         # Prompt user for id of package to review.
@@ -806,6 +854,7 @@ class GUI:
             input("This package has already been assigned to a route. Please press ENTER to return to the main menu.")
             self.draw_main()
 
+    # Complexity: O(N)
     def review_packages_temporal(self):
         self.clear()  # Clear screen.
 
@@ -905,6 +954,7 @@ class GUI:
         input("Press ENTER to continue...")
         self.draw_main()
 
+    # Complexity: O(N)
     def manual_package_assignment(self):
 
         # Grabs all packages and sorts them by package ID.
@@ -949,6 +999,7 @@ class GUI:
             input("Press ENTER to continue...")
             self.review_all_packages()
 
+    # Complexity: O(N)
     def automatic_package_assignment(self):
 
         #
@@ -961,7 +1012,7 @@ class GUI:
         for value in range(package_hash_table.table.__len__()):
             if package_hash_table.table[value].__len__() != 0:
                 for a in package_hash_table.table[value]:
-                    if len(a[1].note) != 0 and a[1].route == "0":
+                    if len(a[1].note) != 0 and a[1].route == 0:
                         package_list.append((int(a[1].id), a[1]))
         # If there are still unassigned packages that have notes, skip assignment and go back to main menu.
         if package_list.__len__() > 0:
@@ -979,6 +1030,7 @@ class GUI:
             input("Please press ENTER to continue.")
         self.draw_main()
 
+    # Complexity: O(C)
     def assign_package_to_route(self, package_id: int):  # Takes package ID and prompts user to assign that package.
         self.clear()
 
@@ -1049,6 +1101,8 @@ class GUI:
                 check = True
         self.draw_main()
 
+    # Complexity: O(C) This would normally be O(N), but in it's current form has a hard limit of data to process of 16
+    # packages. This is because the maximum amount of units per truck is 16. It does not scale beyond the max, O(C).
     def print_route_info(self):
         self.clear()  # Clear screen,
 
@@ -1211,5 +1265,7 @@ class GUI:
         self.draw_main()
 
 
+# Complexity: O(C)
 gui = GUI()
+# Complexity: O(C)
 gui.draw_main()
